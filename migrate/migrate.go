@@ -271,29 +271,8 @@ func (m *Migrator) Migrate(ctx context.Context) error {
 // Lock to ensure multiple migrations cannot occur simultaneously
 const lockNum = int64(9628173550095224) // arbitrary random number
 
-func acquireAdvisoryLock(ctx context.Context, conn *pgx.Conn) error {
-	_, err := conn.Exec(ctx, "select pg_advisory_lock($1)", lockNum)
-	return err
-}
-
-func releaseAdvisoryLock(ctx context.Context, conn *pgx.Conn) error {
-	_, err := conn.Exec(ctx, "select pg_advisory_unlock($1)", lockNum)
-	return err
-}
-
 // MigrateTo migrates to targetVersion
 func (m *Migrator) MigrateTo(ctx context.Context, targetVersion int32) (err error) {
-	err = acquireAdvisoryLock(ctx, m.conn)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		unlockErr := releaseAdvisoryLock(ctx, m.conn)
-		if err == nil && unlockErr != nil {
-			err = unlockErr
-		}
-	}()
-
 	currentVersion, err := m.GetCurrentVersion(ctx)
 	if err != nil {
 		return err
@@ -386,17 +365,6 @@ func (m *Migrator) GetCurrentVersion(ctx context.Context) (v int32, err error) {
 }
 
 func (m *Migrator) ensureSchemaVersionTableExists(ctx context.Context) (err error) {
-	err = acquireAdvisoryLock(ctx, m.conn)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		unlockErr := releaseAdvisoryLock(ctx, m.conn)
-		if err == nil && unlockErr != nil {
-			err = unlockErr
-		}
-	}()
-
 	_, err = m.GetCurrentVersion(ctx)
 	if err == nil {
 		return nil

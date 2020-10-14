@@ -106,17 +106,6 @@ func InstallCodePackage(ctx context.Context, conn *pgx.Conn, mergeData map[strin
 }
 
 func LockExecTx(ctx context.Context, conn *pgx.Conn, sql string) (err error) {
-	err = acquireAdvisoryLock(ctx, conn)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		unlockErr := releaseAdvisoryLock(ctx, conn)
-		if err == nil && unlockErr != nil {
-			err = unlockErr
-		}
-	}()
-
 	tx, err := conn.Begin(ctx)
 	if err != nil {
 		return err
